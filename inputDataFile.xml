@@ -1,0 +1,13 @@
+<?xml version="1.0"?>
+<Users>
+	<User>
+		<FirstName>User1FirstName</FirstName>
+		<LastName>User1LastName</LastName>
+		<Email>User1Email</Email>
+	</User>
+	<User>
+		<FirstName>User2FirstName</FirstName>
+		<LastName>User2LastName</LastName>
+		<Email>User2Email</Email>
+	</User>
+</Users>
