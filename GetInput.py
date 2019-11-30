@@ -1,4 +1,15 @@
 #!/usr/bin/python
+
+import xml.etree.ElementTree as ET
+import random
+import smtplib
+from User import User
+from Credentials import cred_username
+from Credentials import cred_password
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
+from email.mime.image import MIMEImage
+
 def parse_xml(input):
 	temp = []
 	for user in input.iter('User'):
@@ -8,69 +19,90 @@ def parse_xml(input):
 		luser = User(fname,lname,email)
 		temp.append(luser)
 	return temp
-import xml.etree.ElementTree as ET
-import random
-import smtplib
-from User import User
-from email.mime.text import MIMEText
+
+def send_mail(strTo,strFrom,subject,body):
+	msgRoot = MIMEMultipart('related')
+	msgRoot['Subject'] = subject
+	msgRoot['From'] = strFrom
+	msgRoot['To'] = strTo
+
+	#Create alternative message with images using Multipart
+	msgAlternative = MIMEMultipart('alternative')
+	msgRoot.attach(msgAlternative)
+
+	msgText = MIMEText( body, 'html')
+	msgAlternative.attach(msgText)
+
+	fp = open('SecretSanta.jpg', 'rb')
+	msgImage = MIMEImage(fp.read())
+	fp.close()
+
+	msgImage.add_header('Content-ID', '<image1>')
+	msgRoot.attach(msgImage)
+
+	#TODO: don't hardcode credentials, find another way
+	username = cred_username
+	password = cred_password
+	server = smtplib.SMTP('smtp.gmail.com:587')
+	server.ehlo()
+	server.starttls()
+	server.login(username,password)
+	server.sendmail(strFrom, strTo, msgRoot.as_string())
+	server.quit()
+
 #Get the list of users from xml file
 finput = ET.parse('inputDataFile.xml').getroot()
 senders = parse_xml(finput)
 receivers = list(senders)
+#print(senders)
+#print(receivers)
 distinct = False
 while (distinct == False):
 	random.shuffle(receivers)
-	check = zip(receivers,senders)
+	check = list(zip(receivers,senders))
 	for x in check:
-		#if there is a match, then retry
-		if((x[0] == x[1])):
-			distinct = False
-			break
+		#If we get a matching pair, try again
+		if((x[0] == x[1])
+				distinct = False
+				break
 		else:
 			distinct = True
+
 master_list = ""
-#Print the list on-screen and create the text for the email you will receive
 for pair in check:
 	print(pair[0].first_name + " " + pair[0].last_name + " : " + pair[1].first_name + " " + pair[1].last_name)
 	master_list += pair[0].first_name + " " + pair[0].last_name + " : " + pair[1].first_name + " " + pair[1].last_name + "\n"
 
 #email code
-#todo: add this to seperate file
 #send list of everyone to me
-msg = "\r\n".join([
-  "From: your email address",
-  "To: your email address",
-  "Subject: Test",
-  "",
-  master_list
-  ])
-fromaddr = 'your email address'
-toaddrs  = 'your email address'
-username = 'your username'
-password = 'your password'
-server = smtplib.SMTP('smtp.gmail.com:587')
-server.ehlo()
-server.starttls()
-server.login(username,password)
-server.sendmail(fromaddr, toaddrs, msg)
-server.quit()
+strFrom = 'your email address'
+strTo = 'your email address'
+subject = 'Secret Santa Master List 2019'
+body = """<br>
+		    <b>Merry Christmas everyone!</b>
+			<br>
+			<p>Secret Santa is back by popular demand.</p>
+			<b>This is the master list for all participants. Don't share this with anyone!</b>
+			<br>
+			""" + str(master_list) + """
+			<img src="cid:image1">
+			<br> """
+
+send_mail(strTo,strFrom,subject,body)
 
 #send to everyone who their secret santa is
 for user in check:
-	msg = "\r\n".join([
-	  "From: your email address",
-	  "To: " + user[0].email,
-	  "Subject: Test",
-	  "",
-	  "This is the secret santa .\nYou will give a gift to: " + user[1].first_name + " " + user[1].last_name
-	  ])
-	fromaddr = 'your email address'
-	toaddrs  = user[0].email
-	username = 'your username'
-	password = 'your password'
-	server = smtplib.SMTP('smtp.gmail.com:587')
-	server.ehlo()
-	server.starttls()
-	server.login(username,password)
-	server.sendmail(fromaddr, toaddrs, msg)
-	server.quit()
+	strFrom = 'your email addres'
+	strTo = user[0].email
+	subject = 'Secret Santa 2019'
+
+	body = """<br>
+			    <b>Merry Christmas everyone!</b>
+				<br>
+				<p>Secret Santa is back by popular demand.</p>
+				<p>This year, you will give a gift to:<b> """ + user[1].first_name + """ """ + user[1].last_name + """</b></p>
+				<p>I'm looking forward to seeing you all again soon!</p>
+				<img src="cid:image1">
+				<br> """
+
+	send_mail(strTo,strFrom,subject,body)
